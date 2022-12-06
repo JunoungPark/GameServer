@@ -17,9 +17,21 @@
     <ClCompile Include="GameServer.cpp">
       <Filter>Main</Filter>
     </ClCompile>
+    <ClCompile Include="GameSession.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="GameSessionManager.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ServerCore\GameSession.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="GameSessionManager.h">
       <Filter>Utils</Filter>
     </ClInclude>
   </ItemGroup>

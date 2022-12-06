@@ -62,6 +62,12 @@ void Listener::Observe(IocpEvent* iocpEvent, int32 bytes)
 
 bool Listener::StartAccept(shared_ptr<ServerService> _service)
 {
+	service = _service;
+	if (service == nullptr)
+	{
+		return false;
+	}
+
 	socket = SocketHelper::CreateSocket();
 	if (socket == INVALID_SOCKET)
 	{

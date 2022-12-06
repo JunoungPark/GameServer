@@ -33,7 +33,7 @@ bool IocpCore::Observe(uint32 time)
     DWORD bytes = 0;
     ULONG_PTR key;
     IocpEvent* iocpEvent = nullptr;
-
+   
     if (GetQueuedCompletionStatus(iocpHandle, OUT & bytes, OUT & key, reinterpret_cast<LPOVERLAPPED*>(&iocpEvent), time))
     {
         shared_ptr<IocpObj> iocpObj = iocpEvent->owner;

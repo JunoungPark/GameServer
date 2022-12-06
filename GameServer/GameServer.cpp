@@ -1,30 +1,8 @@
 #include "pch.h"
 #include "SocketHelper.h"
 #include "Service.h"
-#include "Session.h"
+#include "GameSession.h"
 #include "ThreadManager.h"
-
-class GameSession : public Session
-{
-public:
-	~GameSession()
-	{
-		printf("¼Ò¸ê\n");
-	}
-
-	virtual int32 OnRecv(BYTE* buffer, int32 len) override
-	{
-		printf("Recv Data Length : %d byte\n", len);
-		Send(buffer, len);
-		return len;
-	}
-
-	virtual void OnSend(int32 len) override
-	{
-		printf("Send Data Length : %d byte\n", len);
-	}
-
-};
 
 int main()
 {
@@ -44,7 +22,6 @@ int main()
 			while (true)
 			{
 				service->GetIocpCore()->Observe();
-
 			}
 		});
 

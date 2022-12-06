@@ -2,6 +2,7 @@
 #include "Session.h"
 #include "SocketHelper.h"
 #include "Service.h"
+#include "SendBuffer.h"
 Session::Session() : recvBuffer(4096)
 {
     socket = SocketHelper::CreateSocket();
@@ -78,26 +79,54 @@ void Session::RegisterRecv()
 	}
 }
 
-void Session::RegisterSend(SendEvent* sendEvent)
+void Session::RegisterSend()
 {
 	if (IsConnected() == false)
 	{
 		return;
 	}
 
-	WSABUF dataBuf;
-	dataBuf.buf = (char*)sendEvent->buffer.data();
-	dataBuf.len = (ULONG)sendEvent->buffer.size();
+	sendEvent.Init();
+	sendEvent.owner = shared_from_this();
 
+	{
+		lock_guard<mutex> guard(lock);
+
+		int32 writeSize = 0;
+
+		while (!sendQueue.empty())
+		{
+			shared_ptr<SendBuffer> sendBuffer = sendQueue.front();
+
+			writeSize += sendBuffer->WriteSize();
+
+			sendQueue.pop();
+			sendEvent.buffers.push_back(sendBuffer);
+		}
+
+	}
+
+	vector<WSABUF> wsaBufs;
+	wsaBufs.reserve(sendEvent.buffers.size());
+
+	for (shared_ptr<SendBuffer> sendBuffer : sendEvent.buffers)
+	{
+		WSABUF dataBuf;
+		dataBuf.buf = reinterpret_cast<char*>(sendBuffer->Buffer());
+		dataBuf.len = static_cast<ULONG>(sendBuffer->WriteSize());
+
+		wsaBufs.push_back(dataBuf);
+	}
 	DWORD sendBytes = 0;
-	if (SOCKET_ERROR == WSASend(socket, &dataBuf, 1, OUT & sendBytes, 0, sendEvent, NULL))
+	if (SOCKET_ERROR == WSASend(socket, wsaBufs.data(), static_cast<DWORD>(wsaBufs.size()), OUT & sendBytes, 0, &sendEvent, NULL))
 	{
 		int32 errorCode = WSAGetLastError();
 		if (errorCode != WSA_IO_PENDING)
 		{
 			HandleError(errorCode);
-			sendEvent->owner = nullptr;
-			delete(sendEvent);
+			sendEvent.owner = nullptr;
+			sendEvent.buffers.clear();
+			sendRegistered.store(false);
 		}
 	}
 }
@@ -133,11 +162,10 @@ void Session::ProcessConnect()
 
 }
 
-void Session::ProcessSend(SendEvent* sendEvent,int32 bytes)
+void Session::ProcessSend(int32 bytes)
 {
-	sendEvent->owner = nullptr;
-
-	delete(sendEvent);
+	sendEvent.owner = nullptr;
+	sendEvent.buffers.clear();
 
 	if (bytes == 0)
 	{
@@ -145,6 +173,16 @@ void Session::ProcessSend(SendEvent* sendEvent,int32 bytes)
 		return;
 	}
 	OnSend(bytes);
+
+	lock_guard<mutex> guard(lock);
+	if (sendQueue.empty())
+	{
+		sendRegistered.store(false);
+	}
+	else
+	{
+		RegisterSend();
+	}
 }
 
 void Session::ProcessRecv(int32 bytes)
@@ -225,7 +263,7 @@ void Session::Observe(IocpEvent* iocpEvent, int32 bytes)
 		ProcessRecv(bytes);
 		break;
 	case IO_TYPE::SEND:
-		ProcessSend(static_cast<SendEvent*>(iocpEvent), bytes);
+		ProcessSend(bytes);
 		break;
 	case IO_TYPE::DISCONNECT:
 		ProcessDisConnect();
@@ -240,18 +278,23 @@ bool Session::Connect()
 	return RegisterConnect();
 }
 
-void Session::Send(BYTE* buffer, int32 len)
+void Session::Send(shared_ptr<SendBuffer> sendBuffer)
 {
-	SendEvent* sendEvent = new SendEvent();
+	//SendEvent* sendEvent = new SendEvent();
+	//
+	//sendEvent->owner = shared_from_this();
+	//
+	//sendEvent->buffers.resize(len);
+	//memcpy(sendEvent->buffers.data(), buffer, len);
+	{
+		lock_guard<mutex> guard(lock);
 
-	sendEvent->owner = shared_from_this();
-
-	sendEvent->buffer.resize(len);
-	memcpy(sendEvent->buffer.data(), buffer, len);
-
-	lock_guard<mutex> guard(lock);
-
-	RegisterSend(sendEvent);
+		sendQueue.push(sendBuffer);
+	}
+	if (sendRegistered.exchange(true) == false)
+	{
+		RegisterSend();
+	}
 }
 
 

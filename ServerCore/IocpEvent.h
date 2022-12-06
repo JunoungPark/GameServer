@@ -47,7 +47,7 @@ public:
 class SendEvent : public IocpEvent
 {
 public:
-	vector<BYTE> buffer;
+	vector<shared_ptr<class SendBuffer>> buffers;
 
 	SendEvent():IocpEvent(IO_TYPE::SEND){}
 };

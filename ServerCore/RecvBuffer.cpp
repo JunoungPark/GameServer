@@ -5,7 +5,9 @@ RecvBuffer::RecvBuffer(int32 _bufferSize)
 {
 	bufferSize = _bufferSize;
 
-	buffer.resize(bufferSize);
+	capacity = bufferSize * Buffercount;
+
+	buffer.resize(capacity);
 }
 
 RecvBuffer::~RecvBuffer()
@@ -24,11 +26,17 @@ void RecvBuffer::Clean()
 	}
 	else
 	{
-		memcpy(&buffer[0], &buffer[readPos], dataSize);
 
-		readPos = 0;
+		if (FreeSize() < bufferSize)
+		{
 
-		writePos = dataSize;
+
+			memcpy(&buffer[0], &buffer[readPos], dataSize);
+
+			readPos = 0;
+
+			writePos = dataSize;
+		}
 	}
 }
 

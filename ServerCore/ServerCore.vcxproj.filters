@@ -56,6 +56,7 @@
     <ClInclude Include="RecvBuffer.h">
       <Filter>Utils</Filter>
     </ClInclude>
+    <ClInclude Include="SendBuffer.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -99,6 +100,9 @@
     </ClCompile>
     <ClCompile Include="RecvBuffer.cpp">
       <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="SendBuffer.cpp">
+      <Filter>소스 파일</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

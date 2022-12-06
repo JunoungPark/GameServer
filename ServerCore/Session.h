@@ -13,12 +13,16 @@ class Session : public IocpObj
 public:
 	//변경
 	RecvBuffer recvBuffer;
+
+	queue<shared_ptr<SendBuffer>> sendQueue;
+	atomic<bool> sendRegistered = false;
 private:
 	ConnectEvent connectEvent;
 	DisconnectEvent disconnectEvent;
 
 	mutex lock;
 	RecvEvent recvEvent;
+	SendEvent sendEvent;
 	shared_ptr<class Service> service;
 
 	SOCKET socket = INVALID_SOCKET;
@@ -41,20 +45,20 @@ private:
 	bool RegisterConnect();
 	void RegisterRecv();
 	//추가
-	void RegisterSend(SendEvent* sendEvent);
+	void RegisterSend();
 	bool RegisterDisconnect();
 
 	void ProcessConnect();
 	void ProcessRecv(int32 bytes);
 	//추가
-	void ProcessSend(SendEvent* sendEvent, int32 bytes);
+	void ProcessSend(int32 bytes);
 
 	void ProcessDisConnect();
 	void HandleError(int32 error);
 
 public:
 	bool Connect();
-	void Send(BYTE* buffer, int32 len);
+	void Send(shared_ptr<SendBuffer> sendBuffer);
 	void Disconnect(const WCHAR* cause);
 protected:
 	virtual void OnConnected() {}
